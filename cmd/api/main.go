@@ -17,7 +17,10 @@ func Add(x, y int) (res int) {
 func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
-	r.Get("/", api.ListAudios)
+	r.Get("/", func(writer http.ResponseWriter, request *http.Request) {
+		writer.Write([]byte("Hello world"))
+	})
+	r.Get("/audio", api.ListAudios)
 	r.Post("/audio", api.UploadAudio)
 
 	fmt.Println("✅ Server up and running on port 8090")
