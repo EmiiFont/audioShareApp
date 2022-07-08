@@ -26,8 +26,10 @@ type Audio struct {
 }
 
 func connectToFirebase() *firebase.App {
-	gopath := os.Getenv("GOPATH")
-	opt := option.WithCredentialsFile(gopath + "/memeaudio-af80d-firebase-adminsdk-n6lr3-2eaada8830.json")
+	gopath := os.Getenv("CREDENTIALS_JSON")
+	parsed := json.RawMessage(gopath)
+	parsedJson, _ := parsed.MarshalJSON()
+	opt := option.WithCredentialsJSON(parsedJson)
 	app, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
 		_ = fmt.Errorf("error initializing app: %v", err)
