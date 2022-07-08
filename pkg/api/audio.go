@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"cloud.google.com/go/storage"
 	"context"
 	"encoding/json"
 	firebase "firebase.google.com/go"
@@ -59,8 +60,11 @@ func uploadFiles(file *bytes.Buffer) {
 		log.Fatalln(err)
 	}
 	bucketObj := bucket.Object("newguid12")
-
 	//bucketObj = bucketObj.If(storage.Conditions{DoesNotExist: true})
+	acl := bucketObj.ACL()
+	if err := acl.Set(ctx, storage.AllUsers, storage.RoleReader); err != nil {
+		fmt.Errorf("ACLHandle.Set: %v", err)
+	}
 	wc := bucketObj.NewWriter(ctx)
 	if _, err := io.Copy(wc, file); err != nil {
 		fmt.Errorf("io.Copy: %v", err)
@@ -68,7 +72,7 @@ func uploadFiles(file *bytes.Buffer) {
 	if err := wc.Close(); err != nil {
 		fmt.Errorf("Writer.Close: %v", err)
 	}
-	//fmt.Fprintf(w, "Blob uploaded.\n")
+	fmt.Println(wc.MediaLink)
 }
 
 func ListAudios(w http.ResponseWriter, r *http.Request) {
@@ -103,11 +107,21 @@ func listFiles() []Audio {
 		if err != nil {
 			fmt.Errorf("Bucket(%q).Objects: %v", "default bucket", err)
 		}
-		fmt.Println(attrs.Name)
+		//temporary for testing.
+		opts := &storage.SignedURLOptions{
+			Scheme:  storage.SigningSchemeV4,
+			Method:  "GET",
+			Expires: time.Now().Add(15 * time.Minute),
+		}
+
+		location, errSigned := it.SignedURL(attrs.Name, opts)
+		if errSigned != nil {
+			fmt.Errorf("Bucket(%q).SignedURL: %v", it, errSigned)
+		}
 		fileSlice = append(fileSlice, Audio{Name: attrs.Name,
 			Type:     attrs.ContentType,
 			Size:     attrs.Size,
-			Location: attrs.MediaLink,
+			Location: location,
 			ID:       "Id should come from firestore",
 		})
 	}
